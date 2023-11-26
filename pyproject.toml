@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "ci-poetry"
+version = "0.1.0"
+description = ""
+authors = ["Lucas de Sousa Rosa <roses.lucas404@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+
+[tool.poetry_bumpversion.file."ci_poetry/__init__.py"]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
