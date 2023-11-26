@@ -1,0 +1,51 @@
+name: Update, build and publish with Poetry
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  update_build_publish:
+    runs-on: ubuntu-latest
+    env:
+      POETRY_VIRTUALENVS_CREATE: "false"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Install Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.12
+
+      - name: Install Poetry
+        uses: abatilo/actions-poetry@v2
+        with:
+          poetry-version: 1.7.1
+      
+      - name: Configure Poetry
+        run: |
+          poetry config virtualenvs.create false
+          poetry self add poetry-bumpversion
+
+      - name: Bump version and build
+        run: |
+          poetry version ${{ github.ref_name }}
+          poetry build
+
+      - name: Commit and push changes
+        uses: EndBug/add-and-commit@v9
+        with:
+          default_author: github_actions
+          committer_name: GitHub Actions
+          committer_email: actions@github.com
+          add: "['pyproject.toml', 'ci_poetry/__init__.py']"
+          commit: --amend --no-edit
+          tag_push: --force-with-lease
+        
+      - name: Publish to PyPI
+        run: |
+          poetry config repositories.test-pypi https://test.pypi.org/legacy/
+          poetry config pypi-token.test-pypi ${{ secrets.PYPI_TOKEN }}
+          poetry publish --repository test-pypi
