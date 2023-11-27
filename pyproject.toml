@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ci-poetry"
-version = "0.1.0"
+version = "0.1.1"
 description = ""
 authors = ["Lucas de Sousa Rosa <roses.lucas404@gmail.com>"]
 readme = "README.md"

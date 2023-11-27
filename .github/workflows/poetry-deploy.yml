@@ -1,8 +1,14 @@
 name: Update, build and publish with Poetry
 
 on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+*'
   release:
     types: [published]
+
+permissions:
+  contents: write
 
 jobs:
   update_build_publish:
@@ -12,40 +18,46 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+      
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
 
       - name: Install Python
         uses: actions/setup-python@v4
         with:
           python-version: 3.12
 
-      - name: Install Poetry
-        uses: abatilo/actions-poetry@v2
-        with:
-          poetry-version: 1.7.1
+      - name: Update version
+        run: sed -i 's/^version = .*/version = "${{github.ref_name}}"/' pyproject.toml
       
-      - name: Configure Poetry
+      - name: Build a binary wheel and a source tarball
         run: |
-          poetry config virtualenvs.create false
-          poetry self add poetry-bumpversion
-
-      - name: Bump version and build
-        run: |
-          poetry version ${{ github.ref_name }}
+          pip install poetry
           poetry build
 
       - name: Commit and push changes
-        uses: EndBug/add-and-commit@v9
-        with:
-          default_author: github_actions
-          committer_name: GitHub Actions
-          committer_email: actions@github.com
-          add: "['pyproject.toml', 'ci_poetry/__init__.py']"
-          commit: --amend --no-edit
-          tag_push: --force-with-lease
-        
-      - name: Publish to PyPI
         run: |
-          poetry config repositories.test-pypi https://test.pypi.org/legacy/
-          poetry config pypi-token.test-pypi ${{ secrets.PYPI_TOKEN }}
-          poetry publish --repository test-pypi
+          git checkout main
+          git fetch origin
+          git pull
+          git add pyproject.toml ci_poetry/__init__.py
+          git commit --amend --no-edit
+          git push --force-with-lease
+        
+      - name: Publish to Test PyPI
+        if: github.event_name == 'push'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.TEST_PYPI_TOKEN }}
+          repository-url: https://test.pypi.org/legacy/
+      
+      - name: Publish to PyPI
+        if: github.event_name == 'release'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_TOKEN }}
